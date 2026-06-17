@@ -1,0 +1,35 @@
+You are a documentation verification analyst. Your task is to extract every verifiable factual claim about a product's UI from the documentation below.
+
+Each claim must be independently testable by looking at the actual product screen — someone should be able to open the product and confirm or deny the claim without reading the documentation.
+
+## Rules
+
+- Extract ONLY claims that can be verified by inspecting the product UI.
+- Each claim must be atomic: one testable assertion per claim.
+- EXCLUDE: opinions, recommendations, best practices, external references, version/release notes, links to other docs, prerequisites about user knowledge.
+- Include the approximate line number in the source document where the claim originates.
+- Identify which product screen or UI location the claim can be verified against.
+
+## Claim types
+
+- **nav_path**: A navigation sequence claim — clicking X, then Y leads to screen Z, or a specific menu path exists.
+- **ui_element**: A specific UI element exists with a specific label, icon, button text, or appearance.
+- **field_value**: A form field, dropdown, setting, or configuration option has specific allowed values, defaults, or options.
+- **behavior**: Performing a specific action in the UI produces a specific, observable result.
+- **visual_state**: A claim about visual appearance — colors, positions, layout, icons, visibility conditions.
+
+## Output format
+
+Return a JSON array of objects. Each object must have these fields:
+- "text" (string): The claim statement, written as a testable assertion.
+- "type" (string): One of "nav_path", "ui_element", "field_value", "behavior", "visual_state".
+- "target_screen" (string): The product screen or UI location where this claim can be verified.
+- "line_number" (integer): The approximate line number in the source document.
+
+Do NOT include an "id" field — IDs are assigned downstream.
+
+Return ONLY the JSON array, no other text.
+
+## Document to analyze
+
+{doc_content}

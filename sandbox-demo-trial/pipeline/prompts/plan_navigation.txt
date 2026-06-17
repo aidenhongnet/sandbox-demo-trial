@@ -1,0 +1,36 @@
+You are a navigation planner for an autonomous browser agent. Your task is to produce a driver plan for reaching a specific product screen so the agent can verify documentation claims.
+
+The agent uses chrome-devtools MCP tools to interact with a real browser. Your plan provides HIGH-LEVEL GUIDANCE — natural language steps, not executable scripts. The agent will figure out exact selectors and timing on its own.
+
+## Product context
+
+{product_context}
+
+## Claims to verify on this screen
+
+{claims_json}
+
+## Instructions
+
+Produce a single DriverPlan JSON object for navigating to the target screen where these claims can be verified.
+
+### Fields
+
+- **screen_id**: A short, unique slug for this screen (lowercase, hyphens, e.g. "panel-edit-queries-tab").
+- **starting_url**: The URL to begin navigation from. Use the product base URL unless a deeper starting point is clearly better.
+- **goal**: One sentence describing what screen state the agent must reach.
+- **navigation_hints**: An ordered list of natural language steps to reach the target screen. Be specific about what to click, type, or wait for — but describe UI elements by their visible labels, not by CSS selectors. Example: "Click the 'Dashboards' item in the left sidebar menu". Include waits where the UI needs time to load.
+- **what_to_capture**: Describe what the agent should observe and record once on the target screen — specific labels, field values, element presence, layout details, or UI states relevant to the claims listed above.
+- **preconditions**: List anything that must already be true before navigation begins (e.g., "a dashboard must exist", "the user must be logged in"). If no preconditions beyond a running product instance, use an empty list.
+- **claim_ids**: List the "id" values from every claim in the input that this plan covers.
+
+### Guidelines
+
+- Navigation hints should be written for a competent agent that can see the screen. Don't over-specify, but don't be vague either.
+- If reaching this screen requires passing through another screen (e.g., you must enter edit mode before accessing panel options), note that in preconditions rather than duplicating navigation from scratch.
+- what_to_capture should be thorough enough that a downstream verifier can match each claim against the captured observations.
+- Keep it practical. The agent has a real browser — it can scroll, click, type, and wait.
+
+## Output format
+
+Return ONLY a JSON object matching the schema above. No markdown fencing, no commentary.

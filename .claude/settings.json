@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "TaskCreate",
+      "TaskList",
+      "TaskUpdate",
+      "TaskGet",
+      "TaskOutput"
+    ],
+    "deny": [
+      "Bash",
+      "mcp__*",
+      "Agent",
+      "Workflow"
+    ]
+  }
+}
