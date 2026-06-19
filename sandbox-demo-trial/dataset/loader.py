@@ -104,6 +104,18 @@ def validate(entries: list[DatasetEntry]) -> list[str]:
         if e.get("doc_format") not in VALID_DOC_FORMATS:
             errors.append(f"{eid}: invalid doc_format '{e.get('doc_format')}'")
 
+        # Version + label provenance (Fix 1 / L6). Lenient: only entries that
+        # declare a product_version are checked, so the un-migrated remainder of
+        # the dataset stays valid. When declared, provenance must accompany it.
+        pv = e.get("product_version")
+        if pv is not None:
+            if not isinstance(pv, str) or not pv.strip():
+                errors.append(f"{eid}: product_version must be a non-empty string")
+            if not e.get("labeled_against_version"):
+                errors.append(f"{eid}: has product_version but missing labeled_against_version (L6)")
+            if not e.get("labeled_by"):
+                errors.append(f"{eid}: has product_version but missing labeled_by (L6)")
+
         if not e.get("content") or len(e.get("content", "")) < 100:
             errors.append(f"{eid}: content missing or too short (<100 chars)")
 
@@ -120,6 +132,13 @@ def validate(entries: list[DatasetEntry]) -> list[str]:
             if c.get("type") not in VALID_CLAIM_TYPES:
                 errors.append(f"{eid}: claim {cid} has invalid type '{c.get('type')}'")
 
+        # is_correct is INDEPENDENT of is_mutated: a claim may be is_correct=false
+        # on a CLEAN doc when the real documentation drifts from the deployed
+        # product (the mission's premise). Any false claim that is NOT a mutation
+        # finding is a "natural discrepancy" and must carry per-claim provenance (L6).
+        incorrect = {c["id"] for c in claims if not c.get("is_correct")}
+        expected_set = set(e.get("expected_findings", []))
+
         if e.get("is_mutated"):
             mut = e.get("mutation")
             if not mut:
@@ -134,24 +153,29 @@ def validate(entries: list[DatasetEntry]) -> list[str]:
                 if mut.get("original_text") == mut.get("mutated_text"):
                     errors.append(f"{eid}: mutation original_text == mutated_text")
                 affected = set(mut.get("affected_claim_ids", []))
-                expected = set(e.get("expected_findings", []))
-                if affected != expected:
+                if affected != expected_set:
                     errors.append(
-                        f"{eid}: affected_claim_ids {affected} != expected_findings {expected}"
+                        f"{eid}: affected_claim_ids {affected} != expected_findings {expected_set}"
                     )
-            incorrect = {c["id"] for c in claims if not c.get("is_correct")}
-            expected_set = set(e.get("expected_findings", []))
-            if incorrect != expected_set:
-                errors.append(
-                    f"{eid}: claims with is_correct=false {incorrect} != expected_findings {expected_set}"
-                )
+            # Every expected finding must be labeled is_correct=false; additional
+            # false claims (natural discrepancies) are allowed beyond them.
+            missing = expected_set - incorrect
+            if missing:
+                errors.append(f"{eid}: expected_findings {missing} not marked is_correct=false")
         else:
             if e.get("mutation") is not None:
                 errors.append(f"{eid}: is_mutated=false but mutation is not null")
             if e.get("expected_findings"):
                 errors.append(f"{eid}: clean entry has non-empty expected_findings")
-            incorrect = [c["id"] for c in claims if not c.get("is_correct")]
-            if incorrect:
-                errors.append(f"{eid}: clean entry has incorrect claims: {incorrect}")
+
+        # Provenance discipline (L6): a false claim that is not a mutation finding
+        # is a natural doc-vs-product discrepancy and must be justified.
+        natural_false = incorrect - expected_set
+        prov = {c["id"]: c.get("provenance") for c in claims}
+        for cid in sorted(natural_false):
+            if not prov.get(cid):
+                errors.append(
+                    f"{eid}: claim {cid} is_correct=false (natural discrepancy) but has no provenance (L6)"
+                )
 
     return errors

@@ -496,3 +496,19 @@ The MVP succeeds if:
 5. **Total cost** stays under $5 for both runs combined (Phase 3 MCP driving is the dominant cost)
 
 These thresholds are deliberately lenient — the point is validating the pipeline architecture, not achieving production accuracy. Navigation success rate (criterion 2) is the most important signal: if the agent can't reach screens autonomously, nothing downstream matters.
+
+> **Wording corrected (2026-06-17, after the first run — see `PLAN_failure-remediation.md`).**
+> The criteria above are only *measurable and meaningful* under these definitions, now
+> enforced in code:
+> - **All criteria require the deployed product version == the labeled version** (Fix 1).
+>   The first run violated this (drove 11.6.0 against a 13.0 doc), which made criterion 3
+>   meaningless — the "false positives" were mostly correct drift detections.
+> - **Criteria 3/4 use one detection-framing confusion matrix** (`pipeline/metrics.py`):
+>   FP = a *clean* claim flagged false; FN = a *missed contradiction* (the costly error per
+>   MISSION.md); `uncertain` is a separate abstention bucket reported with `coverage`, and
+>   is **never** folded into FP. (The first run's "10 FP" was really FP=10 *plus* 9 abstentions,
+>   and an inverted evaluator had reported "19 FP".)
+> - **Criterion 4 (M1)** must be detected *for the right reason* — a divergent navigation
+>   **trace**, not a destination-only guess (Fix 2).
+> - **Criterion 5** is now measurable: per-phase + total `cost_usd` in `results/pipeline_report.json`.
+> - With only one labeled page live, all numbers are **DEV-only** until a TEST page exists (L4).

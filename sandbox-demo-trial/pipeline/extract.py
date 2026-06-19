@@ -6,9 +6,9 @@ import json
 import sys
 from pathlib import Path
 
+from pipeline import metrics, ontology
 from pipeline.config import (
     CLAIMS_DIR,
-    MANIFEST_PATH,
     MODEL_EXTRACT,
     PROMPTS_DIR,
     SOURCES_DIR,
@@ -66,10 +66,16 @@ def _parse_claims(raw_parsed: list | dict | None) -> list[dict]:
 
 
 def _postprocess(
-    claims_raw: list[dict], page_id: str
+    claims_raw: list[dict], page_id: str, dedup_threshold: float = 0.8
 ) -> list[ExtractedClaim]:
-    """Assign IDs, deduplicate by text, validate types."""
+    """Assign IDs, validate types, and collapse duplicates.
+
+    Beyond exact-text dedup, a semantic pass drops near-paraphrases (word overlap
+    >= dedup_threshold with an already-kept claim) so extraction lands near human
+    density (~25-40) instead of over-producing (Fix 6).
+    """
     seen_texts: set[str] = set()
+    kept_texts: list[str] = []
     result: list[ExtractedClaim] = []
     counter = 1
 
@@ -79,11 +85,14 @@ def _postprocess(
         if not text:
             continue
 
-        # Deduplicate by normalized text
+        # Exact dedup, then semantic (near-paraphrase) dedup.
         text_lower = text.lower()
         if text_lower in seen_texts:
             continue
+        if any(metrics.text_overlap(text, kt) >= dedup_threshold for kt in kept_texts):
+            continue
         seen_texts.add(text_lower)
+        kept_texts.append(text)
 
         # Validate and coerce type
         claim_type = item.get("type", "behavior")
@@ -108,12 +117,16 @@ def run(
     product: str,
     page_id: str,
     doc_content: str | None = None,
+    normalize_screens: bool = True,
 ) -> list[ExtractedClaim]:
     """Extract claims from a documentation page.
 
     Args:
         doc_content: If provided, use this instead of loading from source file.
                      Required for mutated dataset entries.
+        normalize_screens: Canonicalize each claim's target_screen to the
+                     product-derived ontology (Fix 6 / L5). Disable only for
+                     debugging raw extractor output.
     """
     ensure_dirs()
 
@@ -123,23 +136,36 @@ def run(
     prompt = template.replace("{doc_content}", doc_content)
 
     print(f"Extracting claims for {dataset_id} (model={MODEL_EXTRACT})...")
-    response = run_claude(prompt, model=MODEL_EXTRACT, json_output=True)
-
-    if not response["success"]:
-        print(f"ERROR: Claude call failed: {response.get('error', 'unknown')}")
-        return []
-
-    if response.get("parse_error"):
-        print(f"WARNING: {response['parse_error']}")
-        print(f"Raw output (first 500 chars): {response['raw'][:500]}")
-        return []
-
-    raw_claims = _parse_claims(response.get("parsed"))
+    # The extractor LLM occasionally returns an empty / unparseable batch on one
+    # call even though the doc has plenty of claims (run-to-run formatting variance).
+    # A single such blip would silently drop a whole dataset entry from the run, so
+    # retry a few times before giving up. (No ground-truth access here — L1-clean.)
+    raw_claims: list[dict] = []
+    last_err = ""
+    for attempt in range(1, 4):
+        response = run_claude(prompt, model=MODEL_EXTRACT, json_output=True)
+        if not response["success"]:
+            last_err = f"call failed: {response.get('error', 'unknown')}"
+        elif response.get("parse_error"):
+            last_err = f"parse error: {response['parse_error']}"
+        else:
+            raw_claims = _parse_claims(response.get("parsed"))
+            if raw_claims:
+                break
+            last_err = "no claims parsed from response"
+        print(f"  extraction attempt {attempt}/3 yielded nothing ({last_err}); "
+              f"{'retrying' if attempt < 3 else 'giving up'}")
     if not raw_claims:
-        print("WARNING: No claims extracted from response.")
+        print(f"WARNING: No claims extracted for {dataset_id} after retries ({last_err}).")
         return []
 
     claims = _postprocess(raw_claims, page_id)
+
+    # Canonicalize target_screen to the product-derived ontology (L5) as a
+    # separate post-step — the extractor itself never sees the screen list.
+    if normalize_screens:
+        for c in claims:
+            c.target_screen = ontology.normalize(c.target_screen, product)
 
     # Write results
     out_path = CLAIMS_DIR / f"{dataset_id}.json"
@@ -153,83 +179,24 @@ def run(
 
 
 def evaluate(dataset_id: str) -> None:
-    """Evaluate extracted claims against manifest ground truth.
+    """Evaluate extracted claims against ground truth via the canonical scorer.
 
-    Computes recall, precision, and type accuracy. Prints a summary.
+    Ground-truth access and the (shared, fuzzy) matcher live in `metrics.py`
+    (guard L1). The previous exact lowercased set-intersection reported ~0%
+    recall by construction — an LLM paraphrase never matches GT verbatim.
     """
-    # Load extracted claims
-    claims_path = CLAIMS_DIR / f"{dataset_id}.json"
-    if not claims_path.exists():
-        print(f"ERROR: No extracted claims at {claims_path}. Run extraction first.")
+    extracted = metrics.load_extracted_claims(dataset_id)
+    if not extracted:
+        print(f"ERROR: No extracted claims for '{dataset_id}'. Run extraction first.")
         return
 
-    extracted = json.loads(claims_path.read_text(encoding="utf-8"))
-    extracted_texts = {c["text"].strip().lower() for c in extracted}
-    extracted_by_text = {c["text"].strip().lower(): c for c in extracted}
+    score = metrics.score_extraction(extracted, dataset_id)
+    print(metrics.format_extraction(score))
 
-    # Load ground truth from manifest
-    ground_truth = None
-    with open(MANIFEST_PATH, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            entry = json.loads(line)
-            if entry["id"] == dataset_id:
-                ground_truth = entry.get("claims", [])
-                break
-
-    if ground_truth is None:
-        print(f"ERROR: Dataset '{dataset_id}' not found in manifest.")
-        return
-
-    gt_texts = {c["text"].strip().lower() for c in ground_truth}
-    gt_by_text = {c["text"].strip().lower(): c for c in ground_truth}
-
-    # Recall: how many ground truth claims are covered by extracted claims
-    # Use fuzzy containment: GT claim is "matched" if any extracted claim
-    # contains its key content (exact match on lowered text)
-    matched_gt = extracted_texts & gt_texts
-    recall = len(matched_gt) / len(gt_texts) if gt_texts else 0.0
-
-    # Precision: how many extracted claims match a ground truth claim
-    matched_ext = extracted_texts & gt_texts
-    precision = len(matched_ext) / len(extracted_texts) if extracted_texts else 0.0
-
-    # Type accuracy: among matched claims, how many have the correct type
-    type_correct = 0
-    for text_lower in matched_gt:
-        if extracted_by_text[text_lower]["type"] == gt_by_text[text_lower]["type"]:
-            type_correct += 1
-    type_accuracy = type_correct / len(matched_gt) if matched_gt else 0.0
-
-    # Print summary
-    print(f"\n{'='*60}")
-    print(f"Evaluation: {dataset_id}")
-    print(f"{'='*60}")
-    print(f"Ground truth claims : {len(gt_texts)}")
-    print(f"Extracted claims    : {len(extracted_texts)}")
-    print(f"Matched             : {len(matched_gt)}")
-    print(f"Recall              : {recall:.1%}")
-    print(f"Precision           : {precision:.1%}")
-    print(f"Type accuracy       : {type_accuracy:.1%}")
-    print(f"{'='*60}")
-
-    # Show unmatched ground truth (missed)
-    missed = gt_texts - matched_gt
-    if missed:
-        print(f"\nMissed ground truth claims ({len(missed)}):")
-        for i, text in enumerate(sorted(missed), 1):
-            gt_claim = gt_by_text[text]
-            print(f"  {i}. [{gt_claim['type']}] {gt_claim['text'][:100]}")
-
-    # Show extra extracted claims (not in ground truth)
-    extra = extracted_texts - matched_ext
-    if extra:
-        print(f"\nExtra extracted claims ({len(extra)}):")
-        for i, text in enumerate(sorted(extra), 1):
-            ext_claim = extracted_by_text[text]
-            print(f"  {i}. [{ext_claim['type']}] {ext_claim['text'][:100]}")
+    if score.missed:
+        print(f"\nMissed ground truth claims ({len(score.missed)}):")
+        for i, text in enumerate(score.missed, 1):
+            print(f"  {i}. {text[:100]}")
 
 
 if __name__ == "__main__":

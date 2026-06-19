@@ -8,7 +8,13 @@ Each claim must be independently testable by looking at the actual product scree
 - Each claim must be atomic: one testable assertion per claim.
 - EXCLUDE: opinions, recommendations, best practices, external references, version/release notes, links to other docs, prerequisites about user knowledge.
 - Include the approximate line number in the source document where the claim originates.
-- Identify which product screen or UI location the claim can be verified against.
+- Identify which product screen or UI location the claim can be verified against. Describe the screen in your own words from the documentation; you do not have a fixed list to choose from.
+
+## Volume control (important)
+
+- Extract each DISTINCT verifiable assertion exactly once. Do not split one assertion into several near-duplicate claims, and do not restate the same fact as it recurs across multiple procedures (e.g. "Click Save" appearing in every section is one claim about the Save button, not ten).
+- A claim may bundle a small, tightly-coupled set of options that are always seen together (e.g. the allowed values of one dropdown) rather than one claim per value.
+- Aim for the set a careful human reviewer would enumerate — typically a few dozen claims for a page (think ~25-40 for a rich procedural page), NOT one claim per sentence. Favor the most directly testable assertions over exhaustive coverage of every clause.
 
 ## Claim types
 

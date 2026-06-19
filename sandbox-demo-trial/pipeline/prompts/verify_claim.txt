@@ -1,33 +1,32 @@
-You are a documentation verification analyst. Your task is to determine whether a specific claim extracted from product documentation is TRUE, FALSE, or UNCERTAIN based on the actual screen state captured from the product.
+You are a documentation verification analyst. Judge each atomic sub-assertion of a claim against the captured product state, then they will be aggregated.
 
-## Claim to verify
+## Claim
 
 {claim_json}
 
-## Screen state description
+## Atomic sub-assertions to judge
+
+{atoms_json}
+
+## Screen state description (neutral inventory captured from the product)
 
 {screen_description}
 
-{screenshot_note}
+{evidence_note}
 
-## Instructions
+## How to judge each atom
 
-Compare the claim against the screen state evidence. Determine whether the claim is supported, contradicted, or cannot be judged from the available evidence.
+Return a result for EVERY atom, by its sub_type:
 
-- **true**: The screen state clearly supports the claim. The described UI elements, values, behaviors, or navigation paths match what the claim asserts.
-- **false**: The screen state clearly contradicts the claim. Something the claim asserts is demonstrably wrong based on the evidence.
-- **uncertain**: The screen state does not contain enough information to confirm or deny the claim. This includes cases where the relevant UI area was not captured, the description is ambiguous, or the claim refers to something not visible in the current screen state.
+- **ui_label**: TRUE if the screen inventory clearly shows the labelled element/value; FALSE if the inventory clearly shows it absent or different; UNCERTAIN if the inventory doesn't cover that region.
+- **functional**: judge ONLY against observed behavior. Do NOT mark FALSE just because the descriptive wording isn't shown on screen — a functional description is not on-screen label text. UNCERTAIN if the behavior wasn't exercised in the capture.
+- **visual**: requires a screenshot. If a screenshot is provided above, judge from it. If NO screenshot is provided, you MUST return UNCERTAIN — never infer a visual attribute (color, solid vs dashed line, exact position) from text alone.
+- **nav**: judge against the navigation trace provided above. TRUE if the documented path's controls existed and led to the stated states in order; FALSE if a documented control was absent or a step led to a different intermediate state than the claim asserts; UNCERTAIN if no trace is available.
 
-For claims of type "visual_state": text descriptions may not reliably capture colors, exact positions, or visual styling. If the claim depends on visual attributes that the text description cannot confirm, mark it as UNCERTAIN — a screenshot review may resolve it.
+Bias for every atom: a missed real contradiction is the costliest error, so only mark TRUE when the evidence actually supports the atom — but never mark FALSE merely because evidence is absent; absence of evidence is UNCERTAIN.
 
-## Evidence requirements
+## Output
 
-- In the "evidence" field, quote the specific text or describe the specific element from the screen description that supports your verdict. If uncertain, explain what information is missing.
-- In the "reasoning" field, explain your logic step by step.
-- Set "confidence" between 0.0 and 1.0 reflecting how certain you are in the verdict.
+Return ONLY a JSON object, no other text:
 
-## Output format
-
-Return ONLY a JSON object with these fields, no other text:
-
-{"claim_id": "<id of the claim>", "result": "true"|"false"|"uncertain", "confidence": <float 0.0-1.0>, "reasoning": "<step-by-step reasoning>", "evidence": "<quoted text or description from screen state>"}
+{"atoms": [{"text": "<atom text>", "sub_type": "<sub_type>", "result": "true|false|uncertain", "evidence": "<specific quote from the state/trace/screenshot, or what is missing>"}], "reasoning": "<brief step-by-step>"}

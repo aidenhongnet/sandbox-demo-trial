@@ -1,0 +1,28 @@
+You are decomposing a documentation claim into atomic sub-assertions so each can be verified independently against a product screen.
+
+## Claim
+
+{claim_json}
+
+## Task
+
+Split the claim into the smallest independent sub-assertions. A compound claim (joined by "and", commas, or listing several elements/options) must become multiple atoms. A simple claim becomes a single atom.
+
+For each atom, assign a `sub_type` that controls how it will be judged:
+
+- **ui_label**: an assertion that a specific labelled element, button, field, tab, option, or value is PRESENT on screen with specific text. Judged against the screen's visible text inventory.
+- **functional**: an assertion about what something DOES — a behavior, effect, or meaning (e.g. "Horizontal arranges panels side-by-side"). These are descriptions of function, NOT on-screen label text. They must NOT be marked false merely because the descriptive wording is absent from the UI; judge them only against observed behavior, and mark UNCERTAIN if behavior was not exercised.
+- **visual**: an assertion that depends on rendered visual attributes — color, line style (solid/dashed), exact position, icon shape. These require a screenshot; text descriptions cannot confirm them.
+- **nav**: an assertion about a navigation path or step order (clicking X then Y reaches Z).
+
+## Important
+
+- Separate label-presence from functional description. For "a 'Horizontal' choice that arranges panels side-by-side", emit one `ui_label` atom for the presence of the "Horizontal" choice and one `functional` atom for "arranges panels side-by-side".
+- Keep each atom's `text` self-contained and testable.
+- Preserve exact quoted labels from the claim.
+
+## Output
+
+Return ONLY a JSON array, no other text:
+
+[{"text": "<atomic assertion>", "sub_type": "ui_label|functional|visual|nav"}]

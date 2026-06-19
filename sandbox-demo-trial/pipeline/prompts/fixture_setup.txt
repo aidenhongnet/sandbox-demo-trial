@@ -1,0 +1,27 @@
+You are setting up a deterministic test fixture in Grafana through the UI. You have chrome-devtools MCP tools (navigate, click, type, screenshot, evaluate) and the Read tool.
+
+This is SETUP ONLY — you are arranging preconditions, not verifying any documentation. Do everything through the rendered UI as a real user would.
+
+## Steps
+
+1. Read the dashboard JSON model from this file (use the Read tool):
+   {fixture_path}
+
+2. Navigate to {grafana_url}. Import the dashboard via **Dashboards → New → Import** (or **Dashboards → New → Import dashboard**). Paste the JSON model into the "Import via dashboard JSON model" box and load it. If a dashboard with uid `mvp-p1-seed` already exists, overwrite it (idempotent). Save it.
+
+3. Open the imported dashboard ("MVP Fixture - p1 seed") and click **Edit**.
+
+4. Switch the dashboard layout to **Auto grid**: open the **Dashboard options** (sidebar), find **Layout**, and select **Auto grid**. This unlocks the auto-grid settings and makes Show/hide rules available.
+
+5. Add a **Show / hide rules** rule to one panel so the rule screens exist:
+   - Select a panel to open the sidebar, expand **Show / hide rules**.
+   - Click **+ Add rule**, choose rule type **Template variable**, and pick the `server` variable with any operator/value.
+   - Click **+ Add rule** a second time (any type) so the **Match rules** (Match all / Match any) control appears.
+
+6. **Save** the dashboard.
+
+## Rules
+
+- If a step's control genuinely does not exist in this Grafana version, record that briefly in your final text response and continue with the remaining steps — partial setup is still useful.
+- Do not fabricate success. Report which steps completed and which did not.
+- You do not need to write any files; just perform the setup and summarize what state now exists.

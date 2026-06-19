@@ -11,45 +11,22 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from pipeline import ontology
 from pipeline.claude_runner import run_claude
 from pipeline.config import (
     CLAIMS_DIR,
-    GRAFANA_PASS,
-    GRAFANA_URL,
-    GRAFANA_USER,
     MODEL_PLAN,
     PLANS_DIR,
     PROMPTS_DIR,
+    spec,
     ensure_dirs,
 )
 from pipeline.models import DriverPlan, ExtractedClaim
 
-# ---------------------------------------------------------------------------
-# Screen dependency graph for Grafana p1
-# Keys are screen names (matching target_screen in claims); values are parent.
-# ---------------------------------------------------------------------------
-GRAFANA_P1_DEPS: dict[str, str | None] = {
-    "Home": None,
-    "Dashboards list": "Home",
-    "New Dashboard": "Dashboards list",
-    "New Dashboard (edit mode)": "New Dashboard",
-    "New panel options": "New Dashboard",
-    "Panel edit mode": "New panel options",
-    "Panel edit mode - Queries tab": "Panel edit mode",
-    "Panel edit mode - Visualization picker": "Panel edit mode",
-    "Panel editor > Standard options": "Panel edit mode",
-    "Dashboard edit mode - toolbar": "New Dashboard",
-    "Dashboard sidebar": "New Dashboard",
-    "Content outline": "New Dashboard",
-    "Dashboard settings - Layout": "New Dashboard",
-    "Auto grid layout settings": "Dashboard settings - Layout",
-    "Panel sidebar - Repeat options": "New Dashboard",
-    "Panel sidebar - Show/hide rules": "New Dashboard",
-    "Show/hide rules - Template variable rule": "Panel sidebar - Show/hide rules",
-    "Show/hide rules - Match rules": "Panel sidebar - Show/hide rules",
-    "Dashboard edit mode - Save menu": "New Dashboard",
-    "Dashboard view mode - toolbar": "New Dashboard",
-}
+# The screen dependency graph is derived from the product's ontology `parent`
+# field (ontology.deps) — one per-product artifact drives both screen grouping
+# and depth ordering. extract.py normalizes each target_screen to these canonical
+# names, so grouping + depth ordering line up with the captures.
 
 
 def _depth(screen: str, deps: dict[str, str | None]) -> int:
@@ -95,11 +72,12 @@ def _group_by_screen(claims: list[ExtractedClaim]) -> dict[str, list[ExtractedCl
     return dict(groups)
 
 
-def _build_product_context() -> str:
+def _build_product_context(product: str = "grafana") -> str:
+    s = spec(product)
     return (
-        f"Product: Grafana\n"
-        f"Base URL: {GRAFANA_URL}\n"
-        f"Login credentials: username={GRAFANA_USER}, password={GRAFANA_PASS}\n"
+        f"Product: {s.name.capitalize()}\n"
+        f"Base URL: {s.url}\n"
+        f"Login credentials: username={s.user}, password={s.password}\n"
         f"The product is running locally in a Docker container."
     )
 
@@ -173,21 +151,23 @@ def get_navigation_order(plans: list[DriverPlan]) -> list[DriverPlan]:
     return ordered
 
 
-def run(dataset_id: str = "grafana-p1-clean") -> list[DriverPlan]:
+def run(dataset_id: str = "grafana-p1-clean", product: str = "grafana") -> list[DriverPlan]:
     """Generate driver plans for all screens in a dataset."""
     ensure_dirs()
+
+    deps = ontology.deps(product)
 
     claims = _load_claims(dataset_id)
     groups = _group_by_screen(claims)
 
     # Sort screen groups by navigation depth (shallow first).
-    sorted_screens = sorted(groups.keys(), key=lambda s: _depth(s, GRAFANA_P1_DEPS))
+    sorted_screens = sorted(groups.keys(), key=lambda s: _depth(s, deps))
 
     # Pre-compute screen_id map for parent lookups.
     screen_id_map: dict[str, str] = {s: _screen_to_id(s) for s in sorted_screens}
 
     template = _load_prompt_template()
-    product_context = _build_product_context()
+    product_context = _build_product_context(product)
 
     plans: list[DriverPlan] = []
     for screen in sorted_screens:
@@ -198,7 +178,7 @@ def run(dataset_id: str = "grafana-p1-clean") -> list[DriverPlan]:
 
         # Enforce consistent screen_id and parent linkage.
         plan.screen_id = screen_id_map[screen]
-        plan.parent_screen_id = _find_parent_id(screen, GRAFANA_P1_DEPS, screen_id_map)
+        plan.parent_screen_id = _find_parent_id(screen, deps, screen_id_map)
 
         plans.append(plan)
 
@@ -215,7 +195,8 @@ def run(dataset_id: str = "grafana-p1-clean") -> list[DriverPlan]:
 
 if __name__ == "__main__":
     dataset = sys.argv[1] if len(sys.argv) > 1 else "grafana-p1-clean"
-    ordered = run(dataset)
+    prod = sys.argv[2] if len(sys.argv) > 2 else "grafana"
+    ordered = run(dataset, prod)
     print(f"\nNavigation order ({len(ordered)} screens):")
     for i, p in enumerate(ordered, 1):
         parent = f" (after {p.parent_screen_id})" if p.parent_screen_id else ""

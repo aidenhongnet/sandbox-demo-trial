@@ -1,0 +1,76 @@
+{
+  "title": "MVP Fixture - p1 seed",
+  "uid": "mvp-p1-seed",
+  "tags": ["mvp-fixture"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "server",
+        "type": "custom",
+        "label": "Server",
+        "multi": true,
+        "includeAll": true,
+        "query": "web-01,web-02,db-01",
+        "current": { "text": "All", "value": "$__all" },
+        "options": []
+      },
+      {
+        "name": "environment",
+        "type": "custom",
+        "label": "Environment",
+        "multi": false,
+        "includeAll": false,
+        "query": "prod,staging,dev",
+        "current": { "text": "prod", "value": "prod" },
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Requests ($server)",
+      "datasource": { "uid": "-- Grafana --" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "targets": [{ "refId": "A", "queryType": "randomWalk" }]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Errors",
+      "datasource": { "uid": "-- Grafana --" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "targets": [{ "refId": "A", "queryType": "randomWalk" }]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Latency",
+      "datasource": { "uid": "-- Grafana --" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "targets": [{ "refId": "A", "queryType": "randomWalk" }]
+    },
+    {
+      "id": 5,
+      "type": "gauge",
+      "title": "Saturation",
+      "datasource": { "uid": "-- Grafana --" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "targets": [{ "refId": "A", "queryType": "randomWalk" }]
+    }
+  ]
+}

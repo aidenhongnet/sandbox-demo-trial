@@ -1,0 +1,44 @@
+{
+  "_provenance": "Product-derived screen map for Grafana 13.0.2 OSS, covering p1 dashboard editing (Dynamic Dashboards) AND p2-p5 areas (Alerting/contact points, Server admin settings, panel-editor Standard options sub-screens, Notification policies/alert rules). Source: the product's own UI navigation structure observed via a claim-blind live-UI audit 2026-06-18 (results/_workflow/grafana-ui-audit-findings.md), NOT manifest.jsonl claims (leakage guard L5). The extractor stays ground-truth-blind; extracted target_screen values are normalized to this ontology as a separate post-step. DRIVER: extend/verify the p2-p5 screens by a fuller claim-blind UI crawl before driving those pages.",
+  "screens": [
+    { "id": "home", "name": "Home", "parent": null, "aliases": ["home page", "main menu", "start page"] },
+    { "id": "dashboards-list", "name": "Dashboards list", "parent": "Home", "aliases": ["dashboards", "dashboards section", "dashboard list"] },
+    { "id": "new-dashboard", "name": "New Dashboard", "parent": "Dashboards list", "aliases": ["create dashboard", "new empty dashboard", "blank dashboard"] },
+    { "id": "new-dashboard-edit-mode", "name": "New Dashboard (edit mode)", "parent": "New Dashboard", "aliases": ["new dashboard edit", "empty dashboard canvas", "add new element"] },
+    { "id": "new-panel-options", "name": "New panel options", "parent": "New Dashboard", "aliases": ["add panel options", "panel option tiles", "configure visualization use saved query use library panel"] },
+    { "id": "saved-queries-drawer", "name": "Saved queries drawer", "parent": "New panel options", "aliases": ["saved queries", "use saved query drawer"] },
+    { "id": "panel-edit-mode", "name": "Panel edit mode", "parent": "New panel options", "aliases": ["panel editor", "edit panel", "panel edit"] },
+    { "id": "panel-edit-mode-queries-tab", "name": "Panel edit mode - Queries tab", "parent": "Panel edit mode", "aliases": ["queries tab", "query editor", "data source picker"] },
+    { "id": "panel-edit-mode-visualization-picker", "name": "Panel edit mode - Visualization picker", "parent": "Panel edit mode", "aliases": ["visualization picker", "all visualizations", "visualization list"] },
+    { "id": "panel-editor-standard-options", "name": "Panel editor > Standard options", "parent": "Panel edit mode", "aliases": ["standard options", "panel standard options"] },
+    { "id": "dashboard-edit-mode-toolbar", "name": "Dashboard edit mode - toolbar", "parent": "New Dashboard", "aliases": ["edit toolbar", "dashboard toolbar edit", "sidebar and toolbar"] },
+    { "id": "dashboard-view-mode-toolbar", "name": "Dashboard view mode - toolbar", "parent": "New Dashboard", "aliases": ["view toolbar", "dashboard toolbar view"] },
+    { "id": "dashboard-sidebar", "name": "Dashboard sidebar", "parent": "New Dashboard", "aliases": ["sidebar", "edit sidebar", "docked sidebar"] },
+    { "id": "content-outline", "name": "Content outline", "parent": "New Dashboard", "aliases": ["content outline panel", "outline"] },
+    { "id": "dashboard-settings-layout", "name": "Dashboard settings - Layout", "parent": "New Dashboard", "aliases": ["layout settings", "panel layouts", "custom auto grid layout"] },
+    { "id": "auto-grid-layout-settings", "name": "Auto grid layout settings", "parent": "Dashboard settings - Layout", "aliases": ["auto grid", "auto grid settings", "min column width max columns row height fill screen"] },
+    { "id": "panel-sidebar-repeat-options", "name": "Panel sidebar - Repeat options", "parent": "New Dashboard", "aliases": ["repeat options", "repeat by variable", "repeat direction"] },
+    { "id": "panel-sidebar-showhide-rules", "name": "Panel sidebar - Show/hide rules", "parent": "New Dashboard", "aliases": ["show hide rules", "show/hide rules", "conditional rendering"] },
+    { "id": "showhide-rules-template-variable-rule", "name": "Show/hide rules - Template variable rule", "parent": "Panel sidebar - Show/hide rules", "aliases": ["template variable rule", "show hide template variable"] },
+    { "id": "showhide-rules-match-rules", "name": "Show/hide rules - Match rules", "parent": "Panel sidebar - Show/hide rules", "aliases": ["match rules", "match all match any"] },
+    { "id": "dashboard-edit-mode-save-menu", "name": "Dashboard edit mode - Save menu", "parent": "New Dashboard", "aliases": ["save menu", "save dropdown", "save as copy", "more save options"] },
+    { "id": "dashboard-edit-mode-panel-drag", "name": "Dashboard edit mode - panel drag", "parent": "New Dashboard", "aliases": ["panel drag", "move panel", "drag and drop panel"] },
+    { "id": "dashboard-edit-mode-panel-resize", "name": "Dashboard edit mode - panel resize", "parent": "New Dashboard", "aliases": ["panel resize", "resize panel"] },
+
+    { "id": "server-admin-settings", "name": "Server admin settings", "parent": "Home", "aliases": ["server admin settings", "admin settings", "server admin > settings", "effective settings", "runtime settings"] },
+
+    { "id": "alerting", "name": "Alerting", "parent": "Home", "aliases": ["alerting page", "alerting section", "alerts & irm", "alert & irm"] },
+    { "id": "notification-configuration", "name": "Notification configuration", "parent": "Alerting", "aliases": ["notification configuration", "alerting notifications"] },
+    { "id": "contact-points-tab", "name": "Contact points tab", "parent": "Notification configuration", "aliases": ["contact points", "contact points tab", "contact point list"] },
+    { "id": "new-contact-point-form", "name": "New contact point form", "parent": "Contact points tab", "aliases": ["new contact point form", "add contact point", "edit contact point form", "contact point form", "email integration form within contact point", "email integration form"] },
+    { "id": "integration-dropdown", "name": "Integration dropdown", "parent": "New contact point form", "aliases": ["integration dropdown", "new contact point form > integration dropdown", "integration list", "supported contact point integrations"] },
+    { "id": "contact-point-testing-dialog", "name": "Contact point testing dialog", "parent": "New contact point form", "aliases": ["contact point testing dialog", "test contact point dialog", "test dialog"] },
+    { "id": "templates-tab", "name": "Templates tab", "parent": "Notification configuration", "aliases": ["templates tab", "notification configuration > templates tab"] },
+    { "id": "notification-policies", "name": "Notification policies", "parent": "Notification configuration", "aliases": ["notification policies", "notification policies tab", "notification policy tree", "default policy"] },
+    { "id": "alert-rules-list", "name": "Alert rules list", "parent": "Alerting", "aliases": ["alert rules list", "alert rules", "alerting list"] },
+    { "id": "alert-rule-editor", "name": "Alert rule editor", "parent": "Alert rules list", "aliases": ["alert rule editor", "new alert rule", "rule config", "alert rule config", "rule editor"] },
+
+    { "id": "panel-editor-unit-dropdown", "name": "Unit dropdown", "parent": "Panel editor > Standard options", "aliases": ["unit dropdown", "unit drop-down", "panel editor > standard options > unit > misc > string", "unit > misc > string", "misc > string"] },
+    { "id": "panel-editor-color-scheme", "name": "Color scheme dropdown", "parent": "Panel editor > Standard options", "aliases": ["color scheme", "color scheme dropdown", "panel editor > standard options > color scheme", "single continuous color", "multiple continuous colors"] }
+  ]
+}
